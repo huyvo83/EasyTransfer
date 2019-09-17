@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<title>Easy Transfer </title>
+	<link rel="stylesheet" type="text/css" href="reset.css" />
+	<link rel="stylesheet" type="text/css" href="style.css" />
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+	<script src="https://www.gstatic.com/firebasejs/3.7.4/firebase.js"></script>
+	<script src="init.js"></script>
+<script>
+	var verified_user = '';
+	var loop_cnt = 0;
+	var verified_id = '';	
+	var allTimer = [];
+	
+	
+$(document).ready(function () {	
+	$("#btnVerify").prop("disabled", true);	
+	$("#btnSubmit").prop("disabled", true);
+	var user_input_id = document.getElementById('chat_id');
+	var pattern = new RegExp("^\\d{9}$");
+	user_input_id.onkeyup = function(){
+		console.log('chat id is:' + $("#chat_id")[0].value);
+		if($("#chat_id")[0].value.match(pattern))
+		{
+			console.log('matched pattern');
+			console.log($("#chat_id")[0].value);
+			console.log('verified_id is :' + verified_id);
+			//if new insert chat_id is different with previous verified chat_id then user need to verify number again
+			if (verified_id !== $("#chat_id")[0].value){
+				console.log('in set btn to false');
+				$("#btnVerify").prop("disabled", false); //set verify btn to available
+				$("#btnSubmit").prop("disabled", true);	 //set submit btn to disable
+
+				//verified_id = $("#chat_id")[0].value;
+				//console.log('set verified_id to: ' + verified_id);
+			}
+			else{
+				//else if user insert same number again, then do not need to
+				if (verified_id == $("#chat_id")[0].value)
+				$("#btnVerify").prop("disabled", true);	
+				$("#btnSubmit").prop("disabled", false);				
+			}			
+		}	
+		else{
+			console.log('not match 9 digit');
+			$("#btnVerify").prop("disabled", true);	
+			$("#btnSubmit").prop("disabled", true);				
+		}		
+	};
+
+	
+	
+    $("#btnSubmit").click(function (event) {	
+        event.preventDefault();		
+		console.log($("#attached_file"));
+		
+		var chat_id = $("#chat_id")[0].value;
+		var message = $("#msg")[0].value;		
+		if($("#attached_file")[0].value !== '' || message !== '')
+		{
+			// disabled the submit button
+			$("#btnSubmit").prop("disabled", true);	
+			
+			if($("#attached_file")[0].value)
+			{
+				UploadToFireBase(chat_id, message);
+				//console.log($("#attached_file")[0].value + " was attached");			
+			}
+			else{		
+				//console.log("use send message function");
+				send_document(chat_id,message,'');
+				//console.log("no file attached.");
+				//console.log($("#attached_file")[0].value);			
+			}
+			$("#sending").css("display","block");				
+		}
+		else
+		{
+			alert('Please insert message or attach file');
+		}
+
+    });
+});
+
+
+</script>
+<script>
+
+function send_document(chat_id, message, uploadedUrl){
+        //stop submit the form, we will post it manually.
+        event.preventDefault();
+		var data = {};
+		data.chat_id = chat_id;
+		data.user_text = message;
+		data.url = uploadedUrl;
+		var file = document.getElementById("attached_file").files[0];		
+		$.ajax({
+			type: 'POST',
+			data: JSON.stringify(data), //input data to be sent to the server
+			contentType: 'application/json',
+			url: '/send',                        
+			success: function(res) {
+				$("#sending").css("display","none");
+				$("#finish_sending").fadeIn('slow').fadeOut(2000);				
+				console.log('success');
+				console.log(res);
+				$("#debug").html(res);  //summation displayed in the HTML page   
+				$("#btnSubmit").prop("disabled", false);
+			}
+		});			
+}
+
+function clear_file(){
+	$("#attached_file")[0].value="";
+}
+
+
+function UploadToFireBase(chat_id, message){
+	var storage = firebase.storage();
+	var file = document.getElementById("attached_file").files[0];
+	console.log(file);
+	var storageRef = firebase.storage().ref();
+
+	//dynamically set reference to the file name
+	var thisRef = storageRef.child(file.name);
+
+	//put request upload file to firebase storage
+	thisRef.put(file).then(function(snapshot) {
+		console.log('Uploaded a blob or file!');
+		  //get request to get URL for uploaded file
+		thisRef.getDownloadURL().then(function(url) {
+			console.log(url);
+			send_document(chat_id, message, url);
+			})
+	});  
+}
+
+function verify_number(){
+	event.preventDefault();
+	loop_cnt=0;
+	var data = {};	
+	allTimer = [];
+	data.chat_id = $("#chat_id")[0].value;	
+	$("#sending").css("display","block");
+	$.ajax({
+		type: 'POST',
+		data: JSON.stringify(data), //input data to be sent to the server
+		contentType: 'application/json',
+		url: '/verify',                        
+		success: function(res) {			
+			//console.log('success');
+			//console.log(res);
+			//$("#debug").html(res);  //summation displayed in the HTML page   
+			//wait(10000);				
+			check_verify();
+			console.log('verified_user is: ' + verified_user);
+			if (verified_user =='Y')
+			{
+				console.log('Success, user is verified');				
+			}
+
+		}
+	});	
+
+	
+}
+function check_verify(){
+	var data = {};
+	data.chat_id = $("#chat_id")[0].value;
+	$.ajax({
+		type: 'POST',
+		data: JSON.stringify(data),
+		contentType: 'application/json',
+		url: '/check_verify',                        
+		success: function(res) {			
+			console.log('success in check_verify');
+//			console.log(res);
+			verified_user = 'Y';
+			verified_id = data.chat_id;
+			//if verify successfuly then set verify button to disable and enable submit btn
+			$("#btnVerify").prop("disabled", true);	
+			$("#btnSubmit").prop("disabled", false);
+			for(var i = 0; i< allTimer.length; i++){
+				console.log('clear timerID:' + allTimer[i]);
+				clearInterval(allTimer[i]);
+			}				
+			$("#sending").css("display","none");
+			$("#verified_success").fadeIn('slow').fadeOut(2000);				
+			$("#btnSubmit").prop("disabled", false);			
+		},
+		error: function(res){
+			loop_cnt +=1;
+			//wait(10000);
+			if(loop_cnt <6){
+				console.log('loop_cnt is :' + loop_cnt);
+				timerId = setInterval(() => check_verify(), 10000);		
+				allTimer.push(timerId);
+				console.log('allTimer array is:' + allTimer);
+				console.log('timerId is:' + timerId);
+				//check_verify();
+				
+			}
+			else{
+				console.log('loop_cnt is: ' + loop_cnt);
+				console.log('in error - else part');
+				console.log('allTimer array is:' + allTimer);
+				for(var i = 0; i< allTimer.length; i++){
+					console.log('clear timerID:' + allTimer[i]);
+					clearInterval(allTimer[i]);
+				}	
+			$("#sending").css("display","none");
+			$("#verified_fail").fadeIn('slow').fadeOut(2000);				
+			$("#btnSubmit").prop("disabled", false);					
+			}
+		}
+	});			
+}
+
+function wait(ms){
+   var start = new Date().getTime();
+   var end = start;
+   while(end < start + ms) {
+     end = new Date().getTime();
+  }
+};
+</script>
+</head>
+</head>
+<body>
+<div class="flex-grid">
+  <div class="col"></div>
+  <div class="col_middle">
+		<div class="logo">
+		<img src="t_logo.png">
+		</div>
+		<h1>Easy Transfer - Always connect</h1>
+		<br>
+		<h3>Please insert chat_id in the textbox below to start sending messages.<br>
+			To get the chat_id, using Telegram account to send a Hello message to @EasyTransfer_bot
+		</h3>
+
+		<form action="/send" id="fileUploadForm"  method="post">
+			<br>
+		   <span>chat_id: <input type="text" name="chat_id" value="" id="chat_id"/></span> 
+			<button type="button" onclick="verify_number()" id="btnVerify">Verify Number</button>
+		   <br/><br/>
+		   <div id="user_content">
+			   <span >Message: <textarea name="caption" id="msg"/></textarea></span> <br/><br/>   
+				<span ><input type="file" name="document" id="attached_file"/></span>
+				<button type="button" onclick="clear_file()">Clear File</button> <br/><br/>
+				<input type="submit" value="Send" id="btnSubmit"/>
+			</div>
+		</form>  		
+		<div id="temp_url">	
+		
+		</div>
+		<div id="sending">  <!-- start sending.. section -->
+			<div class="sending_inner">
+				<h1> Please Wait...</h1>
+				<span></span>
+				<span></span>
+				<span></span>
+			</div>
+		</div>
+		<div id="finish_sending">
+			<div class="sending_inner">
+				<h1>Message sent</h1>
+			</div>		
+		</div>
+		<div id="verified_success">
+			<div class="sending_inner">
+				<h1>Your account has been successfully verified </h1>
+			</div>		
+		</div>		
+		<div id="verified_fail">
+			<div class="sending_inner">
+				<h1>Please try again </h1>
+			</div>		
+		</div>			
+	
+  </div>
+  <div class="col">
+      <div id="debug"> </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Firebase Web Basics</title>
+
+	<link href="https://fonts.googleapis.com/css?family=Raleway:300,400,500,700" rel="stylesheet">
+</head>
+<body>
+
+	<div class="mainDiv" align="right">
+		<h1 align="left">Firebase File Upload</h1>
+		<progress id="uploader" value="0" max="100">0%</progress>
+		<input type="file" id="fileButton" value="upload" accept=".png,.jpg" />
+		<input type="submit" value="Send" id="btnSubmit" onclick="previewFile()"/>
+	</div>
+
+
+
+<script src="https://www.gstatic.com/firebasejs/3.7.4/firebase.js"></script>
+<script>
+  // Initialize Firebase
+  var config = {
+    apiKey: "AIzaSyBUiomT6K82NNX-he0ofe9f_8Gj1rN7tRg",
+    authDomain: "easytransfer-5d450.firebaseapp.com",
+    databaseURL: "https://easytransfer-5d450.firebaseio.com",
+    projectId: "easytransfer-5d450",
+    storageBucket: "gs://easytransfer-5d450.appspot.com",
+    messagingSenderId: "796957126268",
+    appId: "1:796957126268:web:2b13040e53af8e7f"
+  };
+  firebase.initializeApp(config);
+
+//function to save file
+function previewFile(){
+  var storage = firebase.storage();
+
+  var file = document.getElementById("fileButton").files[0];
+    console.log(file);
+  
+  var storageRef = firebase.storage().ref();
+  
+  //dynamically set reference to the file name
+  var thisRef = storageRef.child(file.name);
+
+  //put request upload file to firebase storage
+  thisRef.put(file).then(function(snapshot) {
+    console.log('Uploaded a blob or file!');
+	  //get request to get URL for uploaded file
+	thisRef.getDownloadURL().then(function(url) {
+	console.log(url);
+  })
+});
+  
+
+
+  }
+
+  
+  
+</script>
+
+
+</script>
+</body>
+</html>
