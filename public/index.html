@@ -169,53 +169,52 @@ function verify_number(){
 function check_verify(){
 	var data = {};
 	data.chat_id = $("#chat_id")[0].value;
-	$.ajax({
-		type: 'POST',
-		data: JSON.stringify(data),
-		contentType: 'application/json',
-		url: '/check_verify',                        
-		success: function(res) {			
-			console.log('success in check_verify');
-//			console.log(res);
-			verified_user = 'Y';
-			verified_id = data.chat_id;
-			//if verify successfuly then set verify button to disable and enable submit btn
-			$("#btnVerify").prop("disabled", true);	
-			$("#btnSubmit").prop("disabled", false);
-			for(var i = 0; i< allTimer.length; i++){
-				console.log('clear timerID:' + allTimer[i]);
-				clearInterval(allTimer[i]);
-			}				
-			$("#sending").css("display","none");
-			$("#verified_success").fadeIn('slow').fadeOut(2000);				
-			$("#btnSubmit").prop("disabled", false);			
-		},
-		error: function(res){
-			loop_cnt +=1;
-			//wait(10000);
-			if(loop_cnt <6){
-				console.log('loop_cnt is :' + loop_cnt);
-				timerId = setInterval(() => check_verify(), 10000);		
-				allTimer.push(timerId);
-				console.log('allTimer array is:' + allTimer);
-				console.log('timerId is:' + timerId);
-				//check_verify();
-				
-			}
-			else{
-				console.log('loop_cnt is: ' + loop_cnt);
-				console.log('in error - else part');
-				console.log('allTimer array is:' + allTimer);
+	if (loop_cnt >6)
+	{
+		for(var i = 0; i< allTimer.length; i++){
+			console.log('clear timerID:' + allTimer[i]);
+			clearInterval(allTimer[i]);
+		}	
+		$("#sending").css("display","none");
+		$("#verified_fail").fadeIn('slow').fadeOut(2000);				
+		$("#btnSubmit").prop("disabled", false);		
+		return;
+	}
+	else{
+	
+		$.ajax({
+			type: 'POST',
+			data: JSON.stringify(data),
+			contentType: 'application/json',
+			url: '/check_verify',                        
+			success: function(res) {			
+				console.log('success in check_verify');
+	//			console.log(res);
+				verified_user = 'Y';
+				verified_id = data.chat_id;
+				//if verify successfuly then set verify button to disable and enable submit btn
+				$("#btnVerify").prop("disabled", true);	
+				$("#btnSubmit").prop("disabled", false);
 				for(var i = 0; i< allTimer.length; i++){
 					console.log('clear timerID:' + allTimer[i]);
 					clearInterval(allTimer[i]);
-				}	
-			$("#sending").css("display","none");
-			$("#verified_fail").fadeIn('slow').fadeOut(2000);				
-			$("#btnSubmit").prop("disabled", false);					
+				}				
+				$("#sending").css("display","none");
+				$("#verified_success").fadeIn('slow').fadeOut(2000);				
+				$("#btnSubmit").prop("disabled", false);			
+			},
+			error: function(res){
+				loop_cnt +=1;
+				//Remove previous setInterval function
+				if (allTimer.length > -1){
+					clearInterval(allTimer[0]);
+					allTimer.pop();
+				}
+				timerId = setInterval(() => check_verify(), 10000);		
+				allTimer.push(timerId);
 			}
-		}
-	});			
+		});			
+	}
 }
 
 function wait(ms){
@@ -237,7 +236,7 @@ function wait(ms){
 		</div>
 		<h1>Easy Transfer - Always connect</h1>
 		<br>
-		<h3>Please insert chat_id in the textbox below to start sending messages.<br>
+		<h3>Please insert chat_id (237609630) in the textbox below to start sending messages.<br>
 			To get the chat_id, using Telegram account to send a Hello message to @EasyTransfer_bot
 		</h3>
 
@@ -271,7 +270,7 @@ function wait(ms){
 		</div>
 		<div id="verified_success">
 			<div class="sending_inner">
-				<h1>Your account has been successfully verified </h1>
+				<h1>Your number has been successfully verified </h1>
 			</div>		
 		</div>		
 		<div id="verified_fail">

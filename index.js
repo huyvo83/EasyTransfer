@@ -69,6 +69,7 @@ app.post('/verify', function(req, res){
 	user_info.verify_sent = 'Y';	
 	user_info.verified = 'N';
 	user_info.chat_id = chat_id;	
+    console.log('telegram_url_doc is: ' + telegram_url_doc);
 
 	//add user to the list
 	if(all_user.indexOf(chat_id) === -1){		
