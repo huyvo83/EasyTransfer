@@ -32,9 +32,6 @@ $(document).ready(function () {
 				console.log('in set btn to false');
 				$("#btnVerify").prop("disabled", false); //set verify btn to available
 				$("#btnSubmit").prop("disabled", true);	 //set submit btn to disable
-
-				//verified_id = $("#chat_id")[0].value;
-				//console.log('set verified_id to: ' + verified_id);
 			}
 			else{
 				//else if user insert same number again, then do not need to
@@ -177,7 +174,7 @@ function check_verify(){
 		}	
 		$("#sending").css("display","none");
 		$("#verified_fail").fadeIn('slow').fadeOut(2000);				
-		$("#btnSubmit").prop("disabled", false);		
+		$("#btnSubmit").prop("disabled", true);				
 		return;
 	}
 	else{
@@ -236,7 +233,7 @@ function wait(ms){
 		</div>
 		<h1>Easy Transfer - Always connect</h1>
 		<br>
-		<h3>Please insert chat_id (237609630) in the textbox below to start sending messages.<br>
+		<h3>Please insert chat_id in the textbox below to start sending messages.<br>
 			To get the chat_id, using Telegram account to send a Hello message to @EasyTransfer_bot
 		</h3>
 

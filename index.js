@@ -183,6 +183,7 @@ function sendDoc(url, reply, chat_id, file_url, res) {
     console.log("Message posted");    
     res.end("ok");
   }).catch(error =>{
+	console.log("error in sending, try sending message");
 	sendMessage(telegram_url_message, reply +'\n File is not supported by Telegram, temporary link provided: \n'+ file_url , chat_id, res);
   });
 }
