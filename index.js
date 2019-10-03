@@ -7,10 +7,18 @@ var path = require('path');
 var verified_user = [];
 var all_user = [];
 var count_message = 0;
+var firebase = require("firebase-admin");
+var serviceAccount = require("./ServiceAccount.json");
 
+firebase.initializeApp({
+  credential: firebase.credential.cert(serviceAccount),
+  databaseURL: "https://easytransfer-5d450.firebaseio.com"
+});
+	
+var database = firebase.database();
+var dataRef = database.ref('phonenumber/');
 let telegram_url_message = "https://api.telegram.org/bot" + process.env.TELEGRAM_API_TOKEN +"/sendMessage";
 let telegram_url_doc = "https://api.telegram.org/bot" + process.env.TELEGRAM_API_TOKEN +"/sendDocument";
-let openWeatherUrl = process.env.OPENWEATHER_API_URL;
 let acceptCommand = ['hi','id','hello'];
 let ErrorInDoc = '';
 app.use(bodyParser.json());
@@ -64,7 +72,7 @@ app.get('/', function(request, response){
 app.post('/verify', function(req, res){	
 	console.log('/verify part');
     var chat_id = req.body.chat_id.toString(); //received input 1 from client side
-    var user_text = 'Do you want to receieve message from EasyTransfer ?';	
+    var user_text = 'Do you want to receive message from EasyTransfer ?';	
 	var user_info = {};
 	user_info.verify_sent = 'Y';	
 	user_info.verified = 'N';
@@ -77,9 +85,6 @@ app.post('/verify', function(req, res){
 		all_user.push(chat_id);	
 		verified_user = [];
 		verified_user.push(user_info);
-		console.log(all_user[0]);
-		console.log(verified_user[0].verify_sent);
-		console.log(verified_user[0].verified);
 	}
 	//if user already in the list
 	else{
@@ -186,6 +191,60 @@ function sendDoc(url, reply, chat_id, file_url, res) {
 	console.log("error in sending, try sending message");
 	sendMessage(telegram_url_message, reply +'\n File is not supported by Telegram, temporary link provided: \n'+ file_url , chat_id, res);
   });
+}
+
+
+app.post('/submitName', function(req, res){	
+	console.log('/submitName receive');
+    var firstname = req.body.firstname; //received input 1 from client side
+    var lastname = req.body.lastname; //received input 1 from client side
+	var phonenumber = req.body.phonenumber; //received input 1 from client side
+	//add user to the list
+	console.log("firstname is: " + firstname);
+	console.log("lastname is: " + lastname);
+	console.log("phonenumber is: " + phonenumber);
+	writeUserData(phonenumber, firstname, lastname, res);
+
+});
+
+
+function writeUserData(phonenumber, firstname, lastname, res) {	
+	dataRef.child(phonenumber).set({
+		phonenumber: phonenumber,
+		firstname: firstname,
+		lastname : lastname
+	}, function(error) {
+    if (error) {
+      console.log("Failed to create data");
+    } else {
+        console.log("Successfull");
+    }
+	res.end();
+  });
+}
+
+
+app.post('/checkName', function(req, res){	
+	console.log('/checkName receive');
+	var phonenumber = req.body.phonenumber; //received input 1 from client side
+	//add user to the list
+	console.log("phonenumber is: " + phonenumber);
+	readChatId(phonenumber, res);
+
+});
+
+function readChatId(phonenumber, res){
+	console.log("in readchatID");
+	dataRef.child(phonenumber).once('value').then(snapshot => {
+		if (snapshot.exists()) {
+			console.log(snapshot.val());
+			console.log("found node");
+		}
+		else{
+			console.log("something wrong");
+		}
+		res.end();		
+	});
 }
 
 app.listen(3000, function() {

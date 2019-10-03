@@ -100,10 +100,10 @@ function send_document(chat_id, message, uploadedUrl){
 			url: '/send',                        
 			success: function(res) {
 				$("#sending").css("display","none");
-				$("#finish_sending").fadeIn('slow').fadeOut(2000);				
+				$("#finish_sending").fadeIn('slow').fadeOut(5000);				
 				console.log('success');
 				console.log(res);
-				$("#debug").html(res);  //summation displayed in the HTML page   
+				//$("#debug").html(res);  //summation displayed in the HTML page   
 				$("#btnSubmit").prop("disabled", false);
 			}
 		});			
@@ -173,7 +173,7 @@ function check_verify(){
 			clearInterval(allTimer[i]);
 		}	
 		$("#sending").css("display","none");
-		$("#verified_fail").fadeIn('slow').fadeOut(2000);				
+		$("#verified_fail").fadeIn('slow').fadeOut(5000);				
 		$("#btnSubmit").prop("disabled", true);				
 		return;
 	}
@@ -197,7 +197,7 @@ function check_verify(){
 					clearInterval(allTimer[i]);
 				}				
 				$("#sending").css("display","none");
-				$("#verified_success").fadeIn('slow').fadeOut(2000);				
+				$("#verified_success").fadeIn('slow').fadeOut(5000);				
 				$("#btnSubmit").prop("disabled", false);			
 			},
 			error: function(res){

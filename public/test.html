@@ -3,18 +3,51 @@
   <head>
     <link href="css/bootstrap.css" rel="stylesheet" type="text/css">
     <link href="css/styles.css" rel="stylesheet" type="text/css">
-    <script src="js/jquery-1.12.0.js"></script>
-    <script src="js/scripts.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+	<script src="https://www.gstatic.com/firebasejs/3.7.4/firebase.js"></script>
+	<script src="init.js"></script>
 	<script>
-		var a = [];
-		a.push('Test1');
-		a.push('Test2');
-		obj1 = {};
-		obj1.testA = "olala";
-		obj1.testB = "OBEBE";
-		a[0] = [];
-		console.log(a[0]);
-	
+		function submitName(){
+			event.preventDefault();			
+			var data = {};	
+			data.phonenumber = $("#phonenumber")[0].value;
+			data.firstname = $("#firstname")[0].value;	
+			data.lastname = $("#lastname")[0].value;	
+			$.ajax({
+				type: 'POST',
+				data: JSON.stringify(data), //input data to be sent to the server
+				contentType: 'application/json',
+				url: '/submitName',                        
+				success: function(res) {			
+					//console.log('success');
+					//console.log(res);
+					//$("#debug").html(res);  //summation displayed in the HTML page   
+					//wait(10000);				
+					console.log('Success send name to server');
+					console.log(res);
+				}
+			});		
+		}	
+		
+		function checkName(){
+			event.preventDefault();			
+			var data = {};	
+			data.phonenumber = $("#phonenumber")[0].value;
+			$.ajax({
+				type: 'POST',
+				data: JSON.stringify(data), //input data to be sent to the server
+				contentType: 'application/json',
+				url: '/checkName',                        
+				success: function(res) {			
+					//console.log('success');
+					//console.log(res);
+					//$("#debug").html(res);  //summation displayed in the HTML page   
+					//wait(10000);				
+					console.log('Success send name to server');
+					console.log(res);
+				}
+			});		
+		}		
 	
 	</script>
     <title>Address book</title>
@@ -27,16 +60,21 @@
 
         <div class="col-md-6">
           <h2>Add a contact:</h2>
-          <form id="new-contact">
+          <form id="new-contact">		  
             <div class="form-group">
-              <label for="new-first-name">First name</label>
-              <input type="text" class="form-control" id="new-first-name">
+              <label>First name</label>
+              <input type="text"  id="firstname">
             </div>
             <div class="form-group">
-              <label for="new-last-name">Last name</label>
-              <input type="text" class="form-control" id="new-last-name">
+              <label>Last name</label>
+              <input type="text"  id="lastname">
             </div>
-            <button type="submit" class="btn">Add</button>
+            <div class="form-group">
+              <label>Phone Number</label>
+              <input type="text"  id="phonenumber">
+            </div>			
+            <button class="btn" onclick="submitName()">Add</button>
+			<button class="btn" onclick="checkName()">Check phone</button>
           </form>
 
           <h2>Contacts:</h2>
@@ -52,8 +90,7 @@
             <p>Last name: <span class="last-name"></span></p>
             <p>Addresses:</p>
           </div>
-        </div>
-        <p>https://www.apsc.gov.au/ils-resources-profiles-comparatives-and-self-assessment</p>
+        </div>       
       </div>
     </div>
   </body>
