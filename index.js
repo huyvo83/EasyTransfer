@@ -1,11 +1,11 @@
-var express = require("express");
-var app = express();
-var bodyParser = require("body-parser");
+const express = require("express");
+const app = express();
+const bodyParser = require("body-parser");
 require("dotenv").config();
 const axios = require("axios");
-var path = require('path');
-var verified_user = [];
-var all_user = [];
+const path = require('path');
+const Promise = require('promise');
+
 var count_message = 0;
 var firebase = require("firebase-admin");
 var serviceAccount = require("./ServiceAccount.json");
@@ -17,10 +17,11 @@ firebase.initializeApp({
 	
 var database = firebase.database();
 var dataRef = database.ref('phonenumber/');
+var chatIdRef = database.ref('chat_id/');
+
 let telegram_url_message = "https://api.telegram.org/bot" + process.env.TELEGRAM_API_TOKEN +"/sendMessage";
 let telegram_url_doc = "https://api.telegram.org/bot" + process.env.TELEGRAM_API_TOKEN +"/sendDocument";
 let acceptCommand = ['hi','id','hello'];
-let ErrorInDoc = '';
 app.use(bodyParser.json());
 app.use(
   bodyParser.urlencoded({
@@ -32,10 +33,13 @@ app.post('/start_bot', function(req, res) {
   const { message } = req.body;
   var initalize_user;
   let reply = "Hi, your id is: ";  
-  initalize_user = all_user.indexOf(message.chat.id.toString());
+  let retrieveID = readId(message.chat.id);  
+  retrieveID.then(function(data){
+	  initalize_user = 1;
+  },function(err){
+	  initalize_user = -1;	  	 
+  });
   count_message = count_message + 1;
-  console.log('all_user[0]:'+ all_user.length);
-  console.log(all_user[0]);
   console.log('message.chat.id is:' + message.chat.id);
   console.log("Count message = " + count_message);
   console.log('initalize_user = ' + initalize_user);
@@ -51,11 +55,10 @@ app.post('/start_bot', function(req, res) {
   else if(initalize_user !== -1 && message.text.toLowerCase().includes('y'))
 	{
 			console.log('create verified = \'Y\'');
-			verified_user[initalize_user].verified = 'Y';
+			updateStatus(message.chat.id);
 			return res.end();
 	}
-   else{
-	   console.log('log here, last else');	   
+   else{   
 		return res.end();
   }
 
@@ -65,63 +68,43 @@ app.use(express.static(path.resolve('./public')));
 app.get('/', function(request, response){
 	response.sendFile(path.resolve('./public/index.html'));
 	console.log('create index.html');
-	
 });
 
 //sending verify message to user
 app.post('/verify', function(req, res){	
 	console.log('/verify part');
     var chat_id = req.body.chat_id.toString(); //received input 1 from client side
-    var user_text = 'Do you want to receive message from EasyTransfer ?';	
-	var user_info = {};
-	user_info.verify_sent = 'Y';	
-	user_info.verified = 'N';
-	user_info.chat_id = chat_id;	
-    console.log('telegram_url_doc is: ' + telegram_url_doc);
-
-	//add user to the list
-	if(all_user.indexOf(chat_id) === -1){		
-		console.log('not found user in user array, add to array');
-		all_user.push(chat_id);	
-		verified_user = [];
-		verified_user.push(user_info);
-	}
-	//if user already in the list
-	else{
-		console.log('Found user - Do nothing');	
-	}		
-//	verified_user.push(user_info);
-
+    var user_text = 'Do you want to receive message from EasyTransfer ?';
+	//var chat_id2 = req.body.chat_id.toString();	
+	let retrieveID = readId(chat_id);
+	retrieveID.then(function(data){
+		//found user in database - no need to add user again
+	},function(err){
+		//no chat_id in database, create one
+		console.log("create chatID in database");
+		createID(chat_id);			
+	});	
 	sendMessage(telegram_url_message, user_text, chat_id, res);			
-	
 });
 
-app.post('/check_verify', function(req, res){	
+app.post('/check_verify', function(req, res){
     var chat_id = req.body.chat_id.toString(); //received input 1 from client side
-	var user_idx = all_user.indexOf(chat_id);
-	console.log('/check_verify part');
-	console.log(all_user);
 	console.log('chat_id in check_verify is: ' + chat_id);
-	console.log('user_idx is: ' + user_idx);
-	if (user_idx !== -1)
-	{
-		if (verified_user[user_idx].verified =='Y')
-		{
-			//found user in all_user log
+	let retrieveID = readId(chat_id);
+	retrieveID.then(function(data){
+		if(data.verified == '1'){
 			console.log('Verified success');
-			res.sendStatus(200);	
-			
-			//return res.end();
+			res.sendStatus(200);
 		}
 		else{
 			res.status(400);
 			return res.end();
-		}
-	}		
-	else{
-		res.status(400);
-		return res.end();
-	}
+		}		
+	},function(err){
+			console.log("readId cannot find chatID in database");
+			res.status(400);
+			return res.end();
+	});
 });
 
 //sending message or attached document to user
@@ -135,15 +118,24 @@ app.post('/send', function(req, res){
 	console.log('url.length is:' + url.length);
 	if (url.length == 0)
 	{
-		console.log('going to send message');
+		console.log('Sending message');
 		sendMessage(telegram_url_message, user_text, chat_id, res);
 	}
 	else
 	{
-		console.log('going to send document');
+		console.log('Sending Doc');
 		sendDoc(telegram_url_doc, user_text, chat_id, url, res);
-		console.log('after send document');
 	}	
+});
+
+
+//Cron job to delete chat_id has been in database for over 2hrs
+app.post('/cronJob', function(req, res){	
+	console.log('/cronJob');
+	let readNode = deleteChatId();
+	readNode.then(function(data){				
+		res.end();
+	});
 });
 
 //function to reply message
@@ -164,7 +156,6 @@ function replyMessage(url, reply, message, res) {
 
 //function to sendMessage to telegram
 function sendMessage(url, reply, chat_id, res) {
-	console.log("in sendmessage");
   axios.post(url, {
     chat_id: chat_id,
     text: reply
@@ -179,7 +170,6 @@ function sendMessage(url, reply, chat_id, res) {
 
 //function to send attached document
 function sendDoc(url, reply, chat_id, file_url, res) {
-	console.log("in sendDoc");
   axios.post(url, {
     chat_id: chat_id,
     caption: reply,	
@@ -193,60 +183,55 @@ function sendDoc(url, reply, chat_id, file_url, res) {
   });
 }
 
-
-app.post('/submitName', function(req, res){	
-	console.log('/submitName receive');
-    var firstname = req.body.firstname; //received input 1 from client side
-    var lastname = req.body.lastname; //received input 1 from client side
-	var phonenumber = req.body.phonenumber; //received input 1 from client side
-	//add user to the list
-	console.log("firstname is: " + firstname);
-	console.log("lastname is: " + lastname);
-	console.log("phonenumber is: " + phonenumber);
-	writeUserData(phonenumber, firstname, lastname, res);
-
-});
-
-
-function writeUserData(phonenumber, firstname, lastname, res) {	
-	dataRef.child(phonenumber).set({
-		phonenumber: phonenumber,
-		firstname: firstname,
-		lastname : lastname
-	}, function(error) {
-    if (error) {
-      console.log("Failed to create data");
-    } else {
-        console.log("Successfull");
-    }
-	res.end();
-  });
-}
-
-
-app.post('/checkName', function(req, res){	
-	console.log('/checkName receive');
-	var phonenumber = req.body.phonenumber; //received input 1 from client side
-	//add user to the list
-	console.log("phonenumber is: " + phonenumber);
-	readChatId(phonenumber, res);
-
-});
-
-function readChatId(phonenumber, res){
-	console.log("in readchatID");
-	dataRef.child(phonenumber).once('value').then(snapshot => {
-		if (snapshot.exists()) {
-			console.log(snapshot.val());
-			console.log("found node");
-		}
-		else{
-			console.log("something wrong");
-		}
-		res.end();		
+//Checking and return chat_id status
+function readId(chat_id){	
+	console.log("receive chat_id in readId: " + chat_id);
+	return new Promise(function(resolve,reject){
+		chatIdRef.child(chat_id).once('value').then(snapshot => {
+			if (snapshot.exists()) {
+				console.log(snapshot.val());
+				console.log("found node");
+				resolve(snapshot.val());		
+			}
+			else{
+				console.log("something wrong");
+				reject(Error("No id in database"));
+			}			
+		});				
 	});
 }
 
+//Create chat_id child
+function createID(chat_id){
+		chatIdRef.child(chat_id).set({
+			chat_id: chat_id,
+			verified: '0',
+			timestamp: new Date().getTime()
+		}, function(error){
+				if(error){
+					console.log("Failed to create data");						
+				}
+				else{
+					console.log("Successfull create data");
+				}		
+			});		
+}
+
+//Update verified status to 1
+function updateStatus(chat_id){
+	chatIdRef.child(chat_id).update({
+		verified: '1',
+		timestamp: new Date().getTime()
+	}, function(error){
+			if(error){
+				console.log("Failed to update data");						
+			}
+			else{
+				console.log("chat_id1 is: " + chat_id + " #.");
+				console.log("Successfull update data");
+			}		
+		});		
+}
 app.listen(3000, function() {
   console.log('Telegram app listening on port 3000!')
 })
