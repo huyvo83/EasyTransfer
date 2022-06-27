@@ -87,7 +87,26 @@
 					console.log(res);
 				}
 			});		
-		}				
+		}			
+		function checkToken(){
+			event.preventDefault();			
+			var data = {};	
+			data.token = $("#token")[0].value;
+			$.ajax({
+				type: 'POST',
+				data: JSON.stringify(data), //input data to be sent to the server
+				contentType: 'application/json',
+				url: '/checkToken',                        
+				success: function(res) {			
+					//console.log('success');
+					//console.log(res);
+					//$("#debug").html(res);  //summation displayed in the HTML page   
+					//wait(10000);				
+					console.log('Success checkNode');
+					console.log(res);
+				}
+			});		
+		}		
 	</script>
     <title>Address book</title>
   </head>
@@ -116,6 +135,12 @@
 			<button class="btn" onclick="checkName()">Check phone</button>
 			<button class="btn" onclick="deleteNumber()">Delete number</button>
 			<button class="btn" onclick="checkNode()">CheckNode</button>
+			<p></p>
+            <div class="form-group">
+              <label>Token Number</label>
+              <input type="text"  id="token">
+            </div>				
+			<button class="btn" onclick="checkToken()">CheckToken</button>
           </form>
 
           <h2>Contacts:</h2>

@@ -72,7 +72,7 @@ section{
 	left:0px;
 	display: none;
 }
-#verified_fail{
+#invalid_token{
 	background:rgba(0,0,0,0.35);
 	width: 100%;
 	height: 100%;
